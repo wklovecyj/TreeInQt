@@ -58,6 +58,12 @@ Window {
                 color: "black"
                 font.pointSize: 16
             }
+            Text {
+                id: nodeNum
+                text: "节点数：" + nodes.length
+                color: "black"
+                font.pointSize: 16
+            }
         }
 
         Item {
