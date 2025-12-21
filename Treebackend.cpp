@@ -1,16 +1,19 @@
-
 #include "TreeBackend.hpp"
 #include <algorithm>
+#include <QDebug>
+
 void TreeBackend::createTree(const QString &exp)
 {
     nodes.clear();
     lines.clear();
     idCounter = 0;
-
+    nodeStack.clear();
+    opStack.clear();
+    root = nullptr;    
     parseExpression(exp);
     putDepth(root, 0);
     putId(root);
-    evaluate(root);
+    res = evaluate(root);
 }
 
 QVariantList TreeBackend::denseNode(int width, int height)
@@ -30,6 +33,10 @@ QVariantList TreeBackend::denseLine()
     return lines;
 }
 
+QString TreeBackend::sum() {
+    return QString::number(res);
+}
+
 void TreeBackend::parseExpression(const QString &exp)
 { // 解析数据并塞入两个栈
     for (int i = 0; i < exp.length(); i++)
@@ -46,7 +53,8 @@ void TreeBackend::parseExpression(const QString &exp)
         }
         else if (ch == '+' || ch == '-' || ch == '*' || ch == '/')
         {
-            while (!opStack.isEmpty() && !precedence(ch))
+            // 当栈顶运算符的优先级高于或等于当前运算符时，需要先进行归约，保证左结合
+            while (!opStack.isEmpty() && precedence(opStack.back()) >= precedence(ch))
             {
                 reduceOnce();
             }
@@ -76,24 +84,17 @@ void TreeBackend::reduceOnce()
     parent->v.op = op.toLatin1(); //此处是QChar转char，我不知道原理
     parent->left = left;
     parent->right = right;
+
     nodeStack.push_back(parent);
 }
 
-bool TreeBackend::precedence(QChar op)
-{ // 这里是传入的和栈顶的比较
-    // 优先度高入栈，低则先弹出栈顶运算符建树
-    QChar topOp = opStack.isEmpty() ? '\0' : opStack.back();
-    if (topOp == '\0')
-        return true;
-    else if (topOp == '+' || topOp == '-')
-    {
-        return true;
-    }
-    else if ((topOp == '*' || topOp == '/') && (op == '*' || op == '/'))
-    {
-        return true;
-    }
-    return false;
+int TreeBackend::precedence(QChar op)
+{
+    if (op == '+' || op == '-')
+        return 1;
+    if (op == '*' || op == '/')
+        return 2;
+    return 0;
 }
 
 double TreeBackend::evaluate(treeNode *node)

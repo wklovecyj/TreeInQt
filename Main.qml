@@ -6,6 +6,7 @@ import QtQuick.Layouts
 Window {
     property var edges: []
     property var nodes: []
+    property var sum: 0
 
     height: 600
     title: qsTr("Hello World")
@@ -47,8 +48,15 @@ Window {
                     backend.createTree(input.text)
                     edges = backend.denseLine()
                     nodes = backend.denseNode(drawArea.width, drawArea.height)
+                    sum = backend.sum()
                     Qt.callLater(edgeCanvas.requestPaint)
                 }
+            }
+            Text {
+                id: result
+                text: "结果：" + sum
+                color: "black"
+                font.pointSize: 16
             }
         }
 

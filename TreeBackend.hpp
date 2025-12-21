@@ -37,10 +37,11 @@ public:
     Q_INVOKABLE void createTree(const QString &exp);
     Q_INVOKABLE QVariantList denseNode(int width, int height);
     Q_INVOKABLE QVariantList denseLine();
+    Q_INVOKABLE QString sum();
 
 private:
     treeNode *root = nullptr;
-    int sum = 0;
+    double res = 0;
     int idCounter = 0; // 所有id从0开始
     QVariantList nodes;
     QVariantList lines;
@@ -48,7 +49,7 @@ private:
     QVector<QChar> opStack = QVector<QChar>();             // 符号栈
     void parseExpression(const QString &exp);              // 解析塞入两栈然后建树
     void reduceOnce();                                     // 传入一个新的，弹出一个运算符，连接两个节点成子树，并可选计算数值
-    bool precedence(QChar op);                      // 运算符优先级
+    int precedence(QChar op);                              // 运算符优先级
     double evaluate(treeNode *node);                 // 计算
     void putDepth(treeNode *node, int depth);              // 赋予深度
     void putId(treeNode *node);
