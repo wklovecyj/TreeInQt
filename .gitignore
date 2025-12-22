@@ -83,4 +83,4 @@ CMakeLists.txt.user*
 
 /dist/
 
-.iss
+*.iss
