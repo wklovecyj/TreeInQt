@@ -9,7 +9,7 @@ void TreeBackend::createTree(const QString &exp)
     idCounter = 0;
     nodeStack.clear();
     opStack.clear();
-    root = nullptr;    
+    root = nullptr;
     parseExpression(exp);
     putDepth(root, 0);
     putId(root);
@@ -33,36 +33,88 @@ QVariantList TreeBackend::denseLine()
     return lines;
 }
 
-QString TreeBackend::sum() {
+QString TreeBackend::sum()
+{
     return QString::number(res);
 }
 
 void TreeBackend::parseExpression(const QString &exp)
 { // 解析数据并塞入两个栈
+    double temp = 0.0;
     for (int i = 0; i < exp.length(); i++)
     {
         QChar ch = exp[i];
         if (ch.isSpace())
             continue; // 跳过空格
-        if (ch.isDigit())
+        if (ch.isDigit() || ch == '.')
         { // 这里先玩简单的，十以内的数字
+            bool dotSeen = false;
+            double factor = 0.1;
+            while (i < exp.length() && (exp[i].isDigit() || exp[i] == '.'))
+            {
+                if (exp[i].isDigit() && !dotSeen)
+                {
+                    temp = temp * 10 + exp[i].digitValue();
+                }
+                else if (exp[i].isDigit() && dotSeen)
+                {
+                    temp = temp + exp[i].digitValue() * factor;
+                    factor *= 0.1;
+                }
+                else if (exp[i] == '.')
+                {
+                    if (dotSeen)
+                    {
+                        qWarning() << "Invalid number format"; //TODO 待处理
+                        break;
+                    }
+                    dotSeen = true;
+                }
+                i++;
+            }
             treeNode *node = new treeNode();
             node->type = NUM;
-            node->v.num = ch.digitValue();
+            node->v.num = temp;
+            temp = 0.0;
+            i--; // 这里i++之后条件不允许了，回退一格
             nodeStack.push_back(node);
         }
-        else if (ch == '+' || ch == '-' || ch == '*' || ch == '/')
+        else if (ch == '+' || ch == '-' || ch == '*' || ch == '/' || ch == '(' || ch == ')')
         {
-            // 当栈顶运算符的优先级高于或等于当前运算符时，需要先进行归约，保证左结合
-            while (!opStack.isEmpty() && precedence(opStack.back()) >= precedence(ch))
+            if (ch == '(')
             {
-                reduceOnce();
+                opStack.push_back(ch);
+                continue;
             }
-            opStack.push_back(ch);
+            else if (ch == ')')
+            {
+                while (!opStack.isEmpty() && opStack.back() != '(')
+                    reduceOnce();
+                if (!opStack.isEmpty() && opStack.back() == '(')
+                    opStack.pop_back(); // 弹出左括号
+                else
+                    qWarning() << "Mismatched parentheses"; // TODO 待处理
+                continue;
+            }
+            else
+            {
+                // 当栈顶运算符的优先级高于或等于当前运算符时，需要先进行归约，保证左结合
+                while (!opStack.isEmpty() && opStack.back() != '(' && precedence(opStack.back()) >= precedence(ch))
+                {
+                    reduceOnce();
+                }
+                opStack.push_back(ch);
+            }
         }
     }
     while (!opStack.isEmpty())
     {
+        if (opStack.back() == '(')
+        {
+            qWarning() << "Mismatched parentheses"; // TODO 待处理
+            opStack.pop_back();
+            continue;
+        }
         reduceOnce();
     }
     root = nodeStack.back();
@@ -71,17 +123,18 @@ void TreeBackend::parseExpression(const QString &exp)
 
 void TreeBackend::reduceOnce()
 {
-    if (opStack.isEmpty() || nodeStack.size() < 2) return;
+    if (opStack.isEmpty() || nodeStack.size() < 2)
+        return;
     QChar op = opStack.back();
     opStack.pop_back();
     treeNode *right = nodeStack.back();
     nodeStack.pop_back();
     treeNode *left = nodeStack.back();
     nodeStack.pop_back();
-    
+
     treeNode *parent = new treeNode();
     parent->type = OP;
-    parent->v.op = op.toLatin1(); //此处是QChar转char，我不知道原理
+    parent->v.op = op.toLatin1(); // 此处是QChar转char，我不知道原理
     parent->left = left;
     parent->right = right;
 
