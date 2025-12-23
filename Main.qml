@@ -9,7 +9,7 @@ Window {
     property var sum: 0
 
     height: 600
-    title: qsTr("Hello World")
+    title: qsTr("Tree")
     visible: true
     width: 800
 
@@ -106,10 +106,10 @@ Window {
             Repeater {
                 model: nodes
 
-                delegate: Rectangle {
-                    width: 40
-                    height: 40
-                    radius: 20
+                delegate: Rectangle { //TODO :这里的大小可以随着节点数以及窗口大小而动态调整
+                    width: 50
+                    height: 50
+                    radius: 25
                     color: "green"
                     border.width: 2
                     border.color: "skyblue"

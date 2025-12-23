@@ -8,13 +8,13 @@ find_package(Qt6 REQUIRED COMPONENTS Quick)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
-qt_add_executable(apptry
+qt_add_executable(Tree
     main.cpp
     TreeBackend.cpp
     TreeBackend.hpp
 )
 
-qt_add_qml_module(apptry
+qt_add_qml_module(Tree
     URI try
     QML_FILES
         Main.qml
@@ -23,7 +23,7 @@ qt_add_qml_module(apptry
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
 # explicit, fixed bundle identifier manually though.
-set_target_properties(apptry PROPERTIES
+set_target_properties(Tree PROPERTIES
 #    MACOSX_BUNDLE_GUI_IDENTIFIER com.example.apptry
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
@@ -31,12 +31,12 @@ set_target_properties(apptry PROPERTIES
     WIN32_EXECUTABLE TRUE
 )
 
-target_link_libraries(apptry
+target_link_libraries(Tree
     PRIVATE Qt6::Quick
 )
 
 include(GNUInstallDirs)
-install(TARGETS apptry
+install(TARGETS Tree
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
