@@ -39,17 +39,33 @@ QString TreeBackend::sum()
 }
 
 void TreeBackend::parseExpression(const QString &exp)
-{ // 解析数据并塞入两个栈
+{ // 解析数据并塞入两个栈（支持一元 +/-，如 -3、2*-3、-(1+2)）
     double temp = 0.0;
-    for (int i = 0; i < exp.length(); i++)
+
+    bool expectOperand = true; // 当前是否期望读取“操作数”（数字/左括号/一元符号）
+    int sign = +1;             // 收集一元 +/-，允许连续：--3、+-+3
+
+    for (int i = 0; i < exp.length(); i++) //做大循环，对数字，括号，运算符分别处理
     {
         QChar ch = exp[i];
         if (ch.isSpace())
-            continue; // 跳过空格
+            continue;
+
+        // 1) 一元 +/-（仅在期望操作数时生效）
+        if (expectOperand && (ch == '+' || ch == '-')) //在一开始就判断期待数
+        {
+            if (ch == '-')
+                sign = -sign;
+            continue;
+        }
+
+        // 2) 数字（含小数）
         if (ch.isDigit() || ch == '.')
-        { // 这里先玩简单的，十以内的数字
+        {
             bool dotSeen = false;
             double factor = 0.1;
+            temp = 0.0;
+
             while (i < exp.length() && (exp[i].isDigit() || exp[i] == '.'))
             {
                 if (exp[i].isDigit() && !dotSeen)
@@ -65,60 +81,111 @@ void TreeBackend::parseExpression(const QString &exp)
                 {
                     if (dotSeen)
                     {
-                        qWarning() << "Invalid number format"; //TODO 待处理
+                        qWarning() << "Invalid number format";
                         break;
                     }
                     dotSeen = true;
                 }
                 i++;
             }
+            i--; // while 多走了一格，回退
+
+            temp *= sign;
+            sign = +1;
+
             treeNode *node = new treeNode();
             node->type = NUM;
             node->v.num = temp;
-            temp = 0.0;
-            i--; // 这里i++之后条件不允许了，回退一格
             nodeStack.push_back(node);
+
+            expectOperand = false; //数字后面没有期待数
+            continue;
         }
-        else if (ch == '+' || ch == '-' || ch == '*' || ch == '/' || ch == '(' || ch == ')')
+
+        // 3) 左括号
+        if (ch == '(')
         {
-            if (ch == '(')
+            if (sign == -1) //！！！！！！，如果-是在()前面出现的，就自己加一个0节点，形成0-()的形式，ai666啊
             {
-                opStack.push_back(ch);
-                continue;
-            }
-            else if (ch == ')')
-            {
-                while (!opStack.isEmpty() && opStack.back() != '(')
-                    reduceOnce();
-                if (!opStack.isEmpty() && opStack.back() == '(')
-                    opStack.pop_back(); // 弹出左括号
-                else
-                    qWarning() << "Mismatched parentheses"; // TODO 待处理
-                continue;
-            }
-            else
-            {
-                // 当栈顶运算符的优先级高于或等于当前运算符时，需要先进行归约，保证左结合
-                while (!opStack.isEmpty() && opStack.back() != '(' && precedence(opStack.back()) >= precedence(ch))
+                treeNode *zero = new treeNode();
+                zero->type = NUM;
+                zero->v.num = 0.0;
+                nodeStack.push_back(zero);
+
+                // 压入一个二元减号，遵循优先级/左结合
+                while (!opStack.isEmpty() && opStack.back() != '(' &&
+                       precedence(opStack.back()) >= precedence('-'))
                 {
                     reduceOnce();
                 }
-                opStack.push_back(ch);
+                opStack.push_back('-');
+                sign = +1;
             }
+
+            opStack.push_back('(');
+            expectOperand = true; //左括号后面有期待数
+            continue;
         }
+
+        // 4) 右括号
+        if (ch == ')')
+        {
+            while (!opStack.isEmpty() && opStack.back() != '(')
+                reduceOnce();
+
+            if (!opStack.isEmpty() && opStack.back() == '(')
+                opStack.pop_back();
+            else
+                qWarning() << "Mismatched parentheses";
+
+            expectOperand = false; //右括号后面没有
+            continue;
+        }
+
+        // 5) 二元运算符
+        if (ch == '+' || ch == '-' || ch == '*' || ch == '/')
+        {
+            if (expectOperand) //实际上这里不会出现+和-的情况，因为在一开始就判断过，这里只有*/遇见期待数的情况
+            {
+                qWarning() << "Operator appears where operand expected:" << ch; //TODO 处理
+                continue;
+            }
+
+            while (!opStack.isEmpty() && opStack.back() != '(' &&  //如果碰到左括号就停
+                   precedence(opStack.back()) >= precedence(ch))
+            {
+                reduceOnce();
+            }
+            opStack.push_back(ch);
+            expectOperand = true; //符号后面有期待数
+            continue;
+        }
+
+        qWarning() << "Unexpected character:" << ch;
     }
+
+    // 扫尾归约
     while (!opStack.isEmpty())
     {
         if (opStack.back() == '(')
         {
-            qWarning() << "Mismatched parentheses"; // TODO 待处理
+            qWarning() << "Mismatched parentheses";
             opStack.pop_back();
             continue;
         }
         reduceOnce();
     }
-    root = nodeStack.back();
-    nodeStack.pop_back();
+
+    if (!nodeStack.isEmpty())
+    {
+        root = nodeStack.back();
+        nodeStack.pop_back();
+    }
+    else
+    {
+        root = nullptr;
+        qWarning() << "Empty expression?";
+    }
 }
 
 void TreeBackend::reduceOnce()
@@ -207,6 +274,8 @@ void TreeBackend::setLocation(treeNode *root, int singleWight, int singleHeight)
 
 void TreeBackend::setFromTo(treeNode *root)
 {
+    if (root == nullptr)
+        return;
     treeNode *left = root->left;
     treeNode *right = root->right;
     if (left)
