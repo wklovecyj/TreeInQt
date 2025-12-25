@@ -24,8 +24,11 @@ Window {
             TextField {
                 id: input
                 placeholderText: "输入表达式"
-                width: 200
-            }
+                width: 200  
+
+                onAccepted: start.clicked()
+                }
+            
 
             Button {
                 id: start
