@@ -7,28 +7,60 @@ Window {
     property var edges: []
     property var nodes: []
     property var sum: 0
+    property var warnText: ""
 
     height: 600
     title: qsTr("Tree")
     visible: true
     width: 800
 
-    Column {
+    Dialog {
+        id: warnDialog
+        title: "Warning"
+        modal: true
+        standardButtons: Dialog.Ok
+
+        width: parent.width/3
+        height: parent.width/3
+
+        onAccepted: close()
+        x: (parent.width - width) / 2
+        y: (parent.height/2 - height) / 2
+        contentItem: Text {
+            text: warnText
+            wrapMode: Text.WordWrap
+            padding: 12
+        }
+    }
+
+    Connections {
+        target: backend
+
+        function onErrorOccurred(message) {
+            warnText = message
+            warnDialog.open()
+            
+            input.text = ""
+        }
+    }
+
+
+
+    ColumnLayout {
         anchors.fill: parent
         spacing: 10
 
-        Row {
+        RowLayout {
             id: controlRow
             spacing: 10
+            Layout.fillWidth: true
 
             TextField {
                 id: input
                 placeholderText: "输入表达式"
-                width: 200  
-
+                Layout.preferredWidth: 200
                 onAccepted: start.clicked()
-                }
-            
+            }
 
             Button {
                 id: start
@@ -55,26 +87,28 @@ Window {
                     Qt.callLater(edgeCanvas.requestPaint)
                 }
             }
+
             Text {
                 id: result
                 text: "结果：" + sum
                 color: "black"
                 font.pointSize: 16
             }
+
             Text {
                 id: nodeNum
                 text: "节点数：" + nodes.length
                 color: "black"
                 font.pointSize: 16
             }
+
+            Item { Layout.fillWidth: true }
         }
 
         Item {
             id: drawArea
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: controlRow.bottom
-            anchors.bottom: parent.bottom
+            Layout.fillWidth: true
+            Layout.fillHeight: true
 
             Canvas {
                 id: edgeCanvas

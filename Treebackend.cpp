@@ -79,9 +79,11 @@ void TreeBackend::parseExpression(const QString &exp)
                 }
                 else if (exp[i] == '.')
                 {
-                    if (dotSeen)
+                    if (dotSeen) //如果已经见过小数点
                     {
-                        qWarning() << "Invalid number format";
+                        emit errorOccurred(QString("一个数中不能有多个小数点"));
+                        root = nullptr;
+                        return;
                         break;
                     }
                     dotSeen = true;
@@ -136,7 +138,9 @@ void TreeBackend::parseExpression(const QString &exp)
             if (!opStack.isEmpty() && opStack.back() == '(')
                 opStack.pop_back();
             else
-                qWarning() << "Mismatched parentheses";
+            {
+                emit errorOccurred(QString("多余右括号")); //发现多余右括号
+            }
 
             expectOperand = false; //右括号后面没有
             continue;
@@ -147,8 +151,7 @@ void TreeBackend::parseExpression(const QString &exp)
         {
             if (expectOperand) //实际上这里不会出现+和-的情况，因为在一开始就判断过，这里只有*/遇见期待数的情况
             {
-                qWarning() << "Operator appears where operand expected:" << ch; //TODO 处理
-                continue;
+                emit errorOccurred(QString("遇到意外的运算符 '%1'").arg(ch)); //占位符写法
             }
 
             while (!opStack.isEmpty() && opStack.back() != '(' &&  //如果碰到左括号就停
@@ -161,7 +164,7 @@ void TreeBackend::parseExpression(const QString &exp)
             continue;
         }
 
-        qWarning() << "Unexpected character:" << ch;
+        emit errorOccurred(QString("遇到意外的字符 '%1'").arg(ch));
     }
 
     // 扫尾归约
@@ -169,7 +172,7 @@ void TreeBackend::parseExpression(const QString &exp)
     {
         if (opStack.back() == '(')
         {
-            qWarning() << "Mismatched parentheses";
+           emit errorOccurred(QString("多余左括号")); //发现多余左括号
             opStack.pop_back();
             continue;
         }
@@ -184,7 +187,7 @@ void TreeBackend::parseExpression(const QString &exp)
     else
     {
         root = nullptr;
-        qWarning() << "Empty expression?";
+        emit errorOccurred(QString("表达式为空")); //表达式为空
     }
 }
 
@@ -236,6 +239,13 @@ double TreeBackend::evaluate(treeNode *node)
         case '*':
             return left * right;
         case '/':
+            if (right == 0) {
+                emit errorOccurred(QString("除数不能为0！"));
+                root = nullptr;
+                nodes.clear();
+                lines.clear();
+                return 0.0; // 或者其他适当的错误处理
+            }
             return left / right;
         default:
             return 0.0; // TODO 如果出现 x/0的情况呢，抛出异常？

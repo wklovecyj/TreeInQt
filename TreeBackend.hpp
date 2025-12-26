@@ -39,6 +39,9 @@ public:
     Q_INVOKABLE QVariantList denseLine();
     Q_INVOKABLE QString sum();
 
+    signals:
+    void errorOccurred(const QString &message);
+
 private:
     treeNode *root = nullptr;
     double res = 0;
